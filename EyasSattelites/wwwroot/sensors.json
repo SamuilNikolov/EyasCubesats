@@ -1,0 +1,56 @@
+{
+  "Launch Vehicle": [
+    {
+      "sensor": "s_T",
+      "minVal": 0,
+      "maxVal": 100,
+      "nominalMin": 10,
+      "nominalMax": 90,
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    {
+      "sensor": "s180",
+      "minVal": 0,
+      "maxVal": 360,
+      "nominalMin": 90,
+      "nominalMax": 270,
+      "r": 0,
+      "g": 255,
+      "b": 0
+    },
+    {
+      "sensor": "offset",
+      "minVal": -10,
+      "maxVal": 10,
+      "nominalMin": -5,
+      "nominalMax": 5,
+      "r": 0,
+      "g": 0,
+      "b": 255
+    }
+  ],
+  "Battery": [
+    {
+      "sensor": "V_Batt",
+      "minVal": 0,
+      "maxVal": 50,
+      "nominalMin": 0,
+      "nominalMax": 10,
+      "r": 255,
+      "g": 255,
+      "b": 0
+    },
+    {
+      "sensor": "I_Batt",
+      "minVal": -50,
+      "maxVal": 150,
+      "nominalMin": 20,
+      "nominalMax": 80,
+      "r": 0,
+      "g": 255,
+      "b": 255
+    }
+  ]
+}

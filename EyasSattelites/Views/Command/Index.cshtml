@@ -1,0 +1,24 @@
+﻿@*
+    This is the view that contains the HTML button to send the command
+*@
+
+@using (Html.BeginForm("SendCommand", "Command", FormMethod.Post, new { id = "commandForm" }))
+{
+    <h1>Send Command to Satellite</h1>
+    <button type="button" id="sendAw5Button">Actuate Reaction Wheel</button>
+}
+
+<script>
+    document.getElementById('sendAw5Button').addEventListener('click', async function () {
+        const response = await fetch('/Command/SendCommand', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({ command: 'aw5' })
+        });
+
+        const data = await response.json();
+        alert(data.message);
+    });
+</script>

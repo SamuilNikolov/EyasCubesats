@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satellite Panel Inspection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: #fff;
+        }
+
+        #main-container {
+            display: flex;
+            flex: 1;
+            border-bottom: 5px solid #555;
+            overflow: hidden;
+        }
+
+        #left, #right {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-right: 2px solid #555;
+            overflow: hidden;
+        }
+
+        #right {
+            border-right: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #bottom {
+            display: flex;
+            justify-content: space-between; /* Use space-between to fill available space */
+            align-items: center;
+            height: 30%; /* Maintain height for bottom section */
+            background-color: #333;
+            padding: 0; /* Remove padding for better space utilization */
+            border-top: 5px solid #555;
+            overflow: hidden;
+        }
+
+        .pcb-render {
+            flex: 1; /* Make each PCB panel flexible */
+            margin: 0 5px; /* Add some space between panels */
+            background-color: #444;
+            border: 2px solid #666;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .pcb-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="main-container">
+        <div id="left">
+            <canvas id="leftCanvas"></canvas>
+        </div>
+        <div id="right">
+            <canvas id="rightCanvas"></canvas>
+        </div>
+    </div>
+    <div id="bottom">
+        <!-- PCB panels at the bottom -->
+        <div class="pcb-render" id="pcb1">
+            <canvas class="pcb-canvas" id="pcb1Canvas"></canvas>
+        </div>
+        <div class="pcb-render" id="pcb2">
+            <canvas class="pcb-canvas" id="pcb2Canvas"></canvas>
+        </div>
+        <div class="pcb-render" id="pcb3">
+            <canvas class="pcb-canvas" id="pcb3Canvas"></canvas>
+        </div>
+        <div class="pcb-render" id="pcb4">
+            <canvas class="pcb-canvas" id="pcb4Canvas"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Function to create the satellite, used in both scenes
+        function createSatellite(solid) {
+            const satelliteGroup = new THREE.Group();
+
+            // Outer body with textures on all six sides
+            const outerGeometry = new THREE.BoxGeometry(1, 0.7, 1);
+            let outerMaterial;
+            if (solid) {
+                // Solid satellite on the left
+                outerMaterial = [
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('https://i.imgur.com/ELx3Nz6.png'),
+                        side: THREE.DoubleSide
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('https://i.imgur.com/ELx3Nz6.png'),
+
+                        side: THREE.DoubleSide
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('https://i.imgur.com/WTU2r6M.png'),
+                        side: THREE.DoubleSide
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        color: 0x000000,
+                        side: THREE.DoubleSide
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('https://i.imgur.com/AqGUFGb.png'),
+                        side: THREE.DoubleSide
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: new THREE.TextureLoader().load('https://i.imgur.com/e39Tijk.jpeg'),
+                        side: THREE.DoubleSide
+                    })
+                ];
+            } else {
+                // Transparent satellite with outline on the right
+                outerMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.1
+                });
+            }
+            const satelliteOuter = new THREE.Mesh(outerGeometry, outerMaterial);
+            satelliteGroup.add(satelliteOuter);
+
+            // Solar panels
+            const panelGeometry = new THREE.BoxGeometry(0.6, 0.01, 1);
+            const panelMaterial = new THREE.MeshPhongMaterial({
+                map: new THREE.TextureLoader().load('https://i.imgur.com/e39Tijk.jpeg'),
+                side: THREE.DoubleSide
+            });
+
+            const panelLeft = new THREE.Mesh(panelGeometry, panelMaterial);
+            panelLeft.position.set(-1.02, 0.1, 0);
+            panelLeft.rotation.y = Math.PI / 2;
+            satelliteGroup.add(panelLeft);
+
+            const panelRight = new THREE.Mesh(panelGeometry, panelMaterial);
+            panelRight.position.set(1.02, 0.1, 0);
+            panelRight.rotation.y = -Math.PI / 2;
+            satelliteGroup.add(panelRight);
+
+            return { satelliteGroup, panelLeft, panelRight };  // Return only satellite group and panels
+        }
+        function createStarrySky() {
+            const starGeometry = new THREE.SphereGeometry(100, 64, 64); // Large sphere for the stars
+            const starMaterial = new THREE.MeshBasicMaterial({
+                map: new THREE.TextureLoader().load('https://c.pxhere.com/photos/39/83/astronomy_constellation_dark_galaxy_night_night_sky_orion_space-1563485.jpg'), // Star texture
+                side: THREE.BackSide // Make the material render on the inside of the sphere
+            });
+            const starSphere = new THREE.Mesh(starGeometry, starMaterial);
+            return starSphere;
+        }
+        let currentYaw = 0; // Initialize yaw variable
+
+        async function fetchTelemetry() {
+
+            try {
+                const response = await fetch('https://localhost:7146/real-telemetry');
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+                const telemetry = data.telemetry;
+
+                // Extract the yaw value from the telemetry string
+                const yawMatch = telemetry.match(/yaw=([-+]?\d*\.?\d+)/);
+                if (yawMatch) {
+                    console.log(yawMatch[1])
+                    return parseFloat(yawMatch[1]);
+                }
+            } catch (error) {
+                console.error('Failed to fetch telemetry data:', error);
+            }
+            return 0;// Default to 0 if fetch fails or yaw not found
+        }
+        function createSun() {
+            const sunGeometry = new THREE.SphereGeometry(20, 32, 32);
+            const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            sun.position.set(100, -10, 160); // Position the sun
+            return sun;
+        }
+
+        function createEarthGlobe() {
+            const globeGeometry = new THREE.SphereGeometry(58, 256, 256); // Adjust size and detail
+            const earthTexture = new THREE.TextureLoader().load('https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/a0bebea3-9ff6-49c3-895a-452cc5c9da63/dg3wwrg-880d1079-b478-4a1e-b512-af9c43a74537.png/v1/fill/w_1264,h_632,q_70,strp/earth_texture_map_with_clouds___1k___by_colourness_dg3wwrg-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NjQwIiwicGF0aCI6IlwvZlwvYTBiZWJlYTMtOWZmNi00OWMzLTg5NWEtNDUyY2M1YzlkYTYzXC9kZzN3d3JnLTg4MGQxMDc5LWI0NzgtNGExZS1iNTEyLWFmOWM0M2E3NDUzNy5wbmciLCJ3aWR0aCI6Ijw9MTI4MCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.rxWxwvu5DAUA0fpdlPUQqO6GdgpwM265qY9hUCuNy4Y'); // Earth texture
+            const globeMaterial = new THREE.MeshPhongMaterial({
+                map: earthTexture
+            });
+            const globe = new THREE.Mesh(globeGeometry, globeMaterial);
+            globe.position.set(0, -70, 0); // Adjust the globe's position as needed
+            globe.rotation.x = 45;
+
+            return globe;
+        }
+
+ function createInternalPCBs() {
+            const pcbGroup = new THREE.Group();
+            const pcbGeometry = new THREE.BoxGeometry(0.9, 0.05, 0.9);
+            const pcbMaterial = new THREE.MeshBasicMaterial({
+                map: new THREE.TextureLoader().load('https://i.imgur.com/XpR1Kx0.jpeg'), // PCB texture
+                side: THREE.DoubleSide
+            });
+
+            // Create each PCB individually and position them
+            const pcb1 = new THREE.Mesh(pcbGeometry, pcbMaterial);
+            pcb1.position.set(0, 0.25, 0);
+            pcbGroup.add(pcb1);
+
+            const pcb2 = new THREE.Mesh(pcbGeometry, pcbMaterial);
+            pcb2.position.set(0, 0.1, 0);
+            pcbGroup.add(pcb2);
+
+            const pcb3 = new THREE.Mesh(pcbGeometry, pcbMaterial);
+            pcb3.position.set(0, -0.05, 0);
+            pcbGroup.add(pcb3);
+
+            const pcb4 = new THREE.Mesh(pcbGeometry, pcbMaterial);
+            pcb4.position.set(0, -0.2, 0);
+            pcbGroup.add(pcb4);
+
+            return pcbGroup;
+        }
+
+        // Setup for the left canvas scene (solid green satellite)
+        function setupLeftScene() {
+            const leftScene = new THREE.Scene();
+            const leftCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const leftRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('leftCanvas') });
+            leftRenderer.setSize(window.innerWidth / 2, window.innerHeight * 0.85);
+            leftCamera.position.z = 2;
+
+            const leftControls = new THREE.OrbitControls(leftCamera, leftRenderer.domElement);
+            const ambientLightLeft = new THREE.AmbientLight(0x404040);
+            leftScene.add(ambientLightLeft);
+
+            const directionalLightLeft = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLightLeft.position.set(5, 5, 5).normalize();
+            leftScene.add(directionalLightLeft);
+
+            // Create solid satellite for the left scene
+            const { satelliteGroup: leftSatellite } = createSatellite(true);
+            leftScene.add(leftSatellite);
+            const globe = createEarthGlobe();
+            leftScene.add(globe);
+            const starrySky = createStarrySky();
+            //leftScene.add(starrySky);
+            const sun = createSun();
+            leftScene.add(sun);
+            async function animateLeft() {
+                // Set the yaw based on the currentYaw fetched from telemetry
+                leftSatellite.rotation.y = THREE.MathUtils.degToRad(currentYaw); // Update yaw directly
+
+                requestAnimationFrame(animateLeft);
+                globe.rotation.y += 0.0003; // Existing globe rotation logic
+                leftControls.update();
+                leftRenderer.render(leftScene, leftCamera);
+            }
+
+            animateLeft();
+        }
+        // Setup for the right canvas scene (transparent satellite with internal PCBs)
+        function setupRightScene() {
+            const rightScene = new THREE.Scene();
+            const rightCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const rightRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('rightCanvas') });
+            rightRenderer.setSize(window.innerWidth / 2, window.innerHeight * 0.85);
+            rightCamera.position.z = 2;
+
+            const rightControls = new THREE.OrbitControls(rightCamera, rightRenderer.domElement);
+            const ambientLightRight = new THREE.AmbientLight(0x404040);
+            rightScene.add(ambientLightRight);
+
+            const directionalLightRight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLightRight.position.set(5, 5, 5).normalize();
+            rightScene.add(directionalLightRight);
+
+            // Create transparent satellite for the right scene
+            const { satelliteGroup: rightSatellite } = createSatellite(false);
+            rightScene.add(rightSatellite);
+
+            // Create and add internal PCBs to the right satellite
+            const internalPCBs = createInternalPCBs();
+            rightSatellite.add(internalPCBs); // Attach internal PCBs to the right satellite
+            // Render loop for the right scene
+            function animateRight() {
+                requestAnimationFrame(animateRight);
+                rightControls.update();
+                rightRenderer.render(rightScene, rightCamera);
+            }
+
+            animateRight();
+        }// Function to setup PCB render canvases at the bottom// Function to setup PCB render canvases at the bottom
+        function setupPCBRender(canvasId, name) {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById(canvasId) });
+            renderer.setSize(window.innerWidth / 4, window.innerHeight * 0.25);
+            camera.position.z = 2;
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5).normalize();
+            scene.add(directionalLight);
+
+            // PCB Mesh
+            const geometry = new THREE.BoxGeometry(2, 0.05, 2);
+            const material = new THREE.MeshBasicMaterial({
+                map: new THREE.TextureLoader().load('https://i.imgur.com/XpR1Kx0.jpeg') // PCB texture
+            });
+            const pcbMesh = new THREE.Mesh(geometry, material);
+            scene.add(pcbMesh);
+
+            // Load font and create text
+            const loader = new THREE.FontLoader();
+            loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+                const textGeometry = new THREE.TextGeometry(name, {
+                    font: font,
+                    size: 0.2, // Adjust the size
+                    height: 0.01, // Thickness of the text
+                    curveSegments: 12,
+                    bevelEnabled: false,
+                });
+
+                const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+
+                // Center the text
+                textGeometry.computeBoundingBox();
+                const textWidth = textGeometry.boundingBox.getSize(new THREE.Vector3()).x;
+                textMesh.position.set(-textWidth / 2, 0.7, 0); // Adjust Y and Z positions
+
+                scene.add(textMesh);
+            });
+
+            // Create a blue dot with emissive property
+            const dotGeometry = new THREE.SphereGeometry(0.05, 200, 200); // Small sphere for the dot
+            const dotMaterial = new THREE.MeshStandardMaterial({
+                color: 0x0000ff,  // Strong blue color
+                emissive: 0x0000ff,  // Strong blue for the emissive color
+                emissiveIntensity: 0.1  // Start with low intensity
+            });
+            const dotMesh = new THREE.Mesh(dotGeometry, dotMaterial);
+
+            // Position the dot somewhere on the PCB
+            dotMesh.position.set(0, 0.05, 1); // Adjust position as needed
+            scene.add(dotMesh);
+
+            // Create a larger sphere for the glow effect
+            const glowGeometry = new THREE.SphereGeometry(0.1, 200, 200); // Larger sphere for glow
+            const glowMaterial = new THREE.MeshStandardMaterial({
+                color: 0x0000ff, // Strong blue color for the glow
+                transparent: true,
+                opacity: 0.1, // Adjust opacity for the glow effect
+                emissive: 0x0000ff, // Emissive blue
+                emissiveIntensity: 1.5 // Stronger intensity for glow
+            });
+            const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+            glowMesh.position.copy(dotMesh.position); // Position it at the same place as the dot
+            scene.add(glowMesh);
+
+            // Flashing effect: Dim to intense blue
+            setInterval(() => {
+                dotMaterial.emissiveIntensity = 2.0; // Strong blue light for 0.2 seconds
+                glowMaterial.opacity = 1.0; // Strong glow during flash
+                setTimeout(() => {
+                    dotMaterial.emissiveIntensity = 0.1; // Dim light after 0.2 seconds
+                    glowMaterial.opacity = 0; // Dim glow after flash
+                }, 200); // Duration of the flash
+            }, 1000); // Flash every second
+
+            // Render loop for PCB canvases
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+
+            animate();
+        }
+        setInterval(async () => {
+            currentYaw = await fetchTelemetry(); // Update currentYaw with fetched value
+        }, 1000);
+
+        // Initialize both scenes and PCB render canvases
+        setupLeftScene();
+        setupRightScene();
+        setupPCBRender('pcb1Canvas', "COMMS PCB");
+        setupPCBRender('pcb2Canvas', "ADCS PCB");
+        setupPCBRender('pcb3Canvas', "EPS PCB");
+        setupPCBRender('pcb4Canvas', "TPS PCB");
+    </script>
+</body>
+</html>

@@ -1,0 +1,759 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/js/initializeChart.js"></script>
+    <script src="/js/handleTelemetry.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0d0d0d;
+            color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            height: 100vh !important;
+        }
+
+        .swal2-height-auto {
+            height: 100vh !important;
+        }
+
+        .flex-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .top-row, .bottom-row {
+            display: flex;
+            width: 100%;
+        }
+
+        .top-row {
+            height: 50vh;
+        }
+
+        .bottom-row {
+            height: 50vh;
+        }
+
+        .telemetry-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+
+        .top-row .telemetry-section:first-child {
+            flex: 1 1 20%;
+        }
+
+        .top-row .telemetry-section:last-child {
+            flex: 1 1 80%;
+            position: relative;
+            padding-right: 220px; /* Reserve space for sidebar */
+        }
+
+        .telemetry-section h2 {
+            font-size: 3rem;
+            color: white;
+        }
+
+        .content {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-top: 10px;
+            padding-right: 5px;
+        }
+
+        .button-container {
+            border-top: 2px solid #ffffff30;
+            padding-top: 10px;
+        }
+
+        .iframe-section {
+            flex: 1;
+            border: 1px solid #333;
+        }
+
+        .swal2-container {
+            overflow-y: hidden !important;
+        }
+
+        .status-nominal {
+            color: greenyellow;
+        }
+
+        /* Sidebar styling */
+        #adcs-buttons {
+            position: absolute;
+            top: 16px;
+            right: 0;
+            bottom: 16px;
+            width: 200px;
+            overflow-y: auto;
+            background-color: black;
+            padding: 10px;
+            border-left: 1px solid #333;
+            border-radius: 8px 0 0 8px;
+        }
+
+        /* Chart container styling */
+        #charts-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .chart-container {
+            width: calc(33.333% - 10px);
+            max-width: 100px;
+            box-sizing: border-box;
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="flex-container mt-3">
+        <div class="top-row">
+            <div class="telemetry-section" id="comms-section">
+                <h2>COMMS</h2>
+                <h5 id="commsState">COMMS STATE</h5>
+                <hr />
+                <div id="comms" class="content">Initializing readings...</div>
+                <div class="flex">
+                    <div class="button-container flex justify-center space-x-2 w-1/2">
+                        <button id="telemRateBtn" class="bg-blue-600 hover:bg-blue-700 text-black text-sm p-1 rounded text-white">CHANGE TELEMETRY RATE (S)</button>
+                        <input type="number" min="1" max="60" id="telemRate" class="text-sm text-center rounded-lg text-black" />
+                    </div>
+                    <div class="button-container flex justify-center space-x-2 w-1/2">
+                        <input type="text" id="chartTypeInput" placeholder="Enter telemetry type (e.g., V_SA)" class="text-black">
+                        <button id="generateChartBtn" class="bg-blue-700">Generate Chart</button>
+                    </div>
+                    <div id="chart-generator-buttons"></div>
+                </div>
+            </div>
+            <div class="telemetry-section" id="adcs-section">
+                <div class="flex items-center w-full">
+                    <h2 class="w-10/12">ADCS</h2>
+                    <button id="acdsTelemetry" class="bg-purple-900 hover:bg-purple-600 text-white text-sm py-2 px-6 rounded w-4/12">GET ACDS TELEMETRY</button>
+                    <button class="bg-purple-800 hover:bg-purple-500 text-white text-sm p-2 rounded m-2" id="toggleReal">Toggle Real Telemetry</button>
+                    <h5 id="status">Current Mode: Real</h5>
+                </div>
+                <h5 id="adcsState">ADCS STATE</h5>
+                <hr />
+                <div id="adcs" class="content">Initializing ADCS data...</div>
+
+                <div id="charts-wrapper" class="w-full flex-wrap"></div>
+
+                <div id="adcs-buttons" class="p-2"></div>
+                <div class="button-container flex flex-col space-y-4">
+                    <div class="slider-container flex flex-col items-center border p-2 w-1/2">
+                        <label for="motorActuation" class="text-lg mb-2">Motor Actuation Duration</label>
+                        <input type="range" id="motorActuation" class="slider" min="-5" max="5" value="0" />
+                        <div class="flex justify-center mt-4 space-x-6">
+                            <button id="motorActuate" class="bg-purple-900 hover:bg-purple-700 text-white p-1 rounded">ACTUATE MOTOR</button>
+                            <span id="motorActuationValue" class="text-lg">0</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-center space-x-6">
+                        <button id="adcsON" class="bg-green-900 hover:bg-green-700 text-white text-sm p-2 rounded">TURN ADCS ON</button>
+                        <button id="adcsOFF" class="bg-red-900 hover:bg-red-700 text-white text-sm p-2 rounded">TURN ADCS OFF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bottom-row">
+            <div class="telemetry-section w-1/3" id="eps-section">
+                <h2>EPS</h2>
+                <h5 id="epsState">EPS STATE</h5>
+                <hr />
+                <div id="eps" class="content">Initializing EPS data...</div>
+                <div class="button-container flex justify-between">
+                    <button id="epsON" class="bg-green-900 hover:bg-green-700 text-white p-2 rounded">TURN EPS ON</button>
+                    <button id="epsOFF" class="bg-red-900 hover:bg-red-700 text-white p-2 rounded">TURN EPS OFF</button>
+                </div>
+            </div>
+            <div class="telemetry-section w-1/3" id="tcs-section">
+                <h2>TCS</h2>
+                <hr />
+                <div id="tcs" class="content">Initializing TCS data...</div>
+            </div>
+            <div class="iframe-section w-1/2">
+                <iframe src="/static/html" class="w-full h-full border-0" title="Example HTML File"></iframe>
+            </div>
+        </div>
+    </div>
+        <script>
+
+        async function loadSensorsConfig() {
+            try {
+                const response = await fetch('./sensors.json');
+                if (response.ok) {
+                    return await response.json();
+                } else {
+                    console.error('Failed to load sensors configuration');
+                    return {};
+                }
+            } catch (error) {
+                console.error('Error fetching sensors configuration:', error);
+                return {};
+            }
+        }
+
+        // Function to create buttons dynamically for each button group
+        function createButtons(sensorsConfig) {
+            const commsSection = document.getElementById('chart-generator-buttons');
+
+            // Clear any existing buttons
+            commsSection.innerHTML = '';
+
+            // Iterate through the buttons in the configuration and create button elements
+            Object.keys(sensorsConfig).forEach(buttonName => {
+                const button = document.createElement('button');
+                button.innerText = buttonName;
+                button.classList.add('sensor-button'); // You can style these with CSS
+                button.onclick = () => handleButtonClick(buttonName, sensorsConfig[buttonName]);
+                commsSection.appendChild(button);
+            });
+        }
+
+        // Handler for button click: update charts based on the selected button's sensors
+        function handleButtonClick(buttonName, sensors) {
+            sensors.forEach(sensor => {
+                // Extract the sensor details from the sensor object
+                const { sensor: sensorId, minVal, maxVal, nominalMin, nominalMax, r, g, b } = sensor;
+
+                // Check if a chart for this sensor already exists
+                if (charts[sensorId]) {
+                    console.log(`Removing existing chart for ${sensorId}.`);
+                    charts[sensorId].destroy();  // Destroy the existing chart instance
+                    console.log(document.getElementById(sensorId))
+                    delete charts[sensorId];     // Remove it from the charts object
+                    document.getElementById(sensorId).parentElement.remove(); // Remove the chart element from the DOM
+                }
+
+                // Check if the sensor data is valid before creating the chart
+                else if (sensorId && minVal !== undefined && maxVal !== undefined) {
+                    // Create a new chart for the sensor
+                    charts[sensorId] = initializeChart(
+                        sensorId,               // Chart container id
+                        sensorId + " Value",    // Chart title
+                        `rgba(${r}, ${g}, ${b}, 0.6)`, // Chart color
+                        minVal,                 // Minimum value
+                        maxVal,                 // Maximum value
+                        nominalMin,             // Nominal minimum value
+                        nominalMax              // Nominal maximum value
+                    );
+                } else {
+                    console.error(`Invalid sensor data for ${sensorId}. Cannot create chart.`);
+                }
+            });
+        }
+
+
+
+            function parseTelemetry(telemetry) {
+                const telemetryLines = telemetry.split('\n');
+                // Error Check
+                const errorCheck = telemetryLines.find(line => line.includes('Error opening COM port') || line.includes('COM PORT DISCONNECTED'));
+                if (errorCheck) {
+                    handleTelemetryError('Error: COM port disconnected.');
+                    return;
+                }
+
+                // Clear error state if telemetry is good
+                removeErrorStyles();
+                var commsLine;
+                var comms;
+                if(real){
+                comms = telemetryLines.filter(line => line.includes('I:'));
+                    commsLine = comms[0];
+                }
+                else{
+                 comms = telemetryLines.filter(line => line.includes('I:'));
+                 commsLine = comms;
+                }
+                // Comms Section
+
+                if (commsLine) {
+                    const pwrValue = commsLine.includes('Pwr=1');
+                    const adcsValue = commsLine.includes('ADCS=1');
+                    // Update COMMS section
+                    let pwrStatusClass = pwrValue ? 'status-nominal' : 'status-bad';
+                let commsStatusGlow = pwrValue
+                    ? (document.getElementById('comms-section').classList.remove('error'), document.getElementById('comms-section').classList.add('nominal'))
+                    : (document.getElementById('comms-section').classList.add('error'), document.getElementById('comms-section').classList.remove('nominal'));
+                document.getElementById('epsState').innerHTML = `<p class="${pwrStatusClass}">Power: ${pwrValue ? 'Nominal' : 'Error'}</p>`;
+
+                let pwrStatusGlow = pwrValue
+                    ? (document.getElementById('eps-section').classList.remove('error'), document.getElementById('eps-section').classList.add('nominal'))
+                    : (document.getElementById('eps-section').classList.add('error'), document.getElementById('eps-section').classList.remove('nominal'));                    // Update ADCS section
+                    let adcsStatusClass = adcsValue ? 'status-nominal' : 'status-bad';
+                    document.getElementById('adcsState').innerHTML = `<p class="${adcsStatusClass}">ADCS: ${adcsValue ? 'Nominal' : 'Error'}</p>`;
+                let adcsStatusGlow = adcsValue
+                    ? (document.getElementById('adcs-section').classList.remove('error'), document.getElementById('adcs-section').classList.add('nominal'))
+                    : (document.getElementById('adcs-section').classList.add('error'), document.getElementById('adcs-section').classList.remove('nominal'));
+
+                    document.getElementById('comms').innerText = comms.join('\n');
+                
+                    // EPS Section
+                    const epsData = telemetryLines.filter(line => line.includes('P:'))[0];
+                    if (epsData && epsData.length) {
+                        document.getElementById('eps').innerText = epsData;
+                    }
+
+                    // TCS Section
+                    const tcsData = telemetryLines.filter(line => line.includes('T:'));
+                    if (tcsData.length) {
+                        document.getElementById('tcs').innerText = tcsData;
+                    }
+
+                var adcsData = telemetryLines.filter(line => line.includes('A:'))[0];
+                // Check for specific telemetry messages in ADCS
+                if (adcsData.includes("check ADS board connection")) {
+                    adcsData = "No telemetry from ADCS board. Ensure proper connection, power, and enabled telemetry.";
+                } else if (epsData && adcsData.length > 0) {
+
+                    // Object to hold dynamically extracted telemetry data
+                    const telemetryData = {};
+
+                    // Loop through chart keys to dynamically extract data from epsData and adcsData
+                    Object.keys(charts).forEach(key => {
+                        let variable = null;
+
+                        // Try to extract value from epsData first
+                        if (epsData.includes(key + '=')) {
+                            variable = epsData.split(key + '=')[1].split(' ')[0].replace(',','');
+                        }
+                        // If not found, try to extract from adcsData
+                        else if (adcsData.includes(key + '=')) {
+                            variable = adcsData.split(key + '=')[1].split(' ')[0].replace(',', '');
+                        }
+
+                        // Add extracted value to telemetryData object if found
+                        if (variable) {
+                            telemetryData[key] = variable;
+                            document.getElementById(key).innerText = key.toUpperCase() + " -> "+variable;
+                        }
+                    });
+
+                    // Convert telemetryData object to required format for updateCharts and update if data exists
+                    if (Object.keys(telemetryData).length > 0) {
+                        updateCharts(Object.entries(telemetryData).map(([key, value]) => ({
+                            id: key,
+                            data: value
+                        })));
+                    }
+                }
+                const adcsLine = telemetryLines.find(line => line.includes('A:'));
+                if (adcsLine) {
+                    const sensorData = adcsLine.split('A:')[1].trim();
+                    const sensors = sensorData.split(', ').map(sensor => {
+                        const [name, value] = sensor.split('=');
+                        return { name: name.trim(), value: parseFloat(value) };
+                    });
+                    updateADCSDisplay(sensors);
+                }
+
+                                document.getElementById('adcs').innerText = adcsData;
+
+                }
+
+            }
+
+            document.getElementById('generateChartBtn').addEventListener('click', () => {
+                const chartType = document.getElementById('chartTypeInput').value.trim();
+                if (!chartType) return; // Exit if input is empty
+                var chartSensor = chartType.split(",")[0];
+                var minVal = parseInt(chartType.split(",")[1]);
+                var maxVal = parseInt(chartType.split(",")[2]);
+                var nominalMin = parseInt(chartType.split(",")[6]);
+                var nominalMax = parseInt(chartType.split(",")[7]);
+            var r = parseInt(chartType.split(",")[3]);
+            var g = parseInt(chartType.split(",")[4]);
+            var b = parseInt(chartType.split(",")[5]);
+            // Check if chart already exists
+            if (charts[chartSensor]) {
+                console.log(`Removing existing chart for ${chartSensor}.`);
+                charts[chartSensor].destroy();  // Destroy existing chart instance
+                delete charts[chartSensor];     // Remove it from charts object
+                document.getElementById(chartSensor).parentElement.remove(); // Remove the chart element from the DOM
+                return;
+            }
+
+            charts[chartSensor] = initializeChart(`${chartSensor}`, `${chartSensor} Value`, `rgba(${r}, ${g}, ${b}, 0.6)`, minVal, maxVal, nominalMin, nominalMax);
+        });
+
+        document.getElementById('motorActuate').addEventListener('click', async () => {
+            const actuationValue = parseInt(document.getElementById('motorActuation').value);
+            if (actuationValue === 0) {
+                // Notify user that the motor will not actuate
+                Swal.fire({
+                    title: "Motor Actuation",
+                    text: "The motor will not actuate since the value is 0.",
+                    icon: "info",
+                    confirmButtonText: "Okay"
+                });
+            } else if (actuationValue < -5 || actuationValue > 5) {
+                // Notify user that the value is out of range
+                Swal.fire({
+                    title: "Invalid Value",
+                    text: "Please select a value between -5 and 5.",
+                    icon: "warning",
+                    confirmButtonText: "Okay"
+                });
+            } else {
+                // Confirmation dialog
+                const result = await Swal.fire({
+                    title: "Are you sure?",
+                    text: `You are about to actuate the motor with a strength of ${actuationValue}.`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Confirm."
+                });
+
+                if (result.isConfirmed) {
+                    // Actuate the motor (implement your actuation logic here)
+                    const response = await fetch('/Satellite/SendCommand', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ command: 'aw' + actuationValue }) // Send the 'p21' command
+                    });
+                    if (response.ok) {
+                        Swal.fire({
+                            title: "Actuated!",
+                            text: `The motor has been actuated - strength ${actuationValue}.`,
+                            icon: "success"
+                        });
+                    }
+                }
+            }
+        });
+            document.getElementById('motorActuation').addEventListener('input', (e) => {
+                document.getElementById('motorActuationValue').innerText = e.target.value;
+            });
+
+            document.addEventListener('DOMContentLoaded', async function () {
+            const sensorsConfig = await loadSensorsConfig();
+            createButtons(sensorsConfig);
+                document.getElementById('adcsON').onclick = async function () {
+                    try {
+                        const response = await fetch('/Satellite/SendCommand', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ command: 'p21' }) // Send the 'p21' command
+                        });
+                        if (!response.ok) {
+                            Swal.fire({
+                                position: "top-end",
+                                icon: "warning",
+                                title: "Command has not been sent",
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                        } else {
+                        var audio = new Audio('./ADCS POWER.mp3');
+                        audio.play();
+
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "Command sent successfully",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    }
+                    } catch (error) {
+                        console.error('Network error:', error);
+                    }
+                };
+            document.getElementById('adcsOFF').onclick = async function () {
+                try {
+                    const response = await fetch('/Satellite/SendCommand', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ command: 'p20' }) // Send the 'p21' command
+                    });
+                    if (!response.ok) {
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "warning",
+                            title: "Command has not been sent",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    } else {
+                        var audio = new Audio('./ADCS OFF.mp3');
+                        audio.play();
+
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "Command sent successfully",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    }
+                } catch (error) {
+                    console.error('Network error:', error);
+                }
+            };
+            document.getElementById('acdsTelemetry').onclick = async function () {
+                try {
+                    const response = await fetch('/Satellite/SendCommand', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ command: 'da1' }) // Send the 'p21' command
+                    });
+                    if (!response.ok) {
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "warning",
+                            title: "Command has not been sent",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    } else {
+
+                        var audio = new Audio('./ADCS TELEM.mp3');
+                        audio.play();
+
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "Command sent successfully",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    }
+                } catch (error) {
+                    console.error('Network error:', error);
+                }
+            };
+                document.getElementById('epsON').onclick = async function () {
+                    try {
+                        const response = await fetch('/Satellite/SendCommand', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ command: 'dp1' }) // Send the 'p21' command
+                        });
+                        if (!response.ok) {
+                            Swal.fire({
+                                position: "top-end",
+                                icon: "warning",
+                                title: "Command has not been sent",
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                        } else {
+
+                        var audio = new Audio('./EPS ON.mp3');
+                        audio.play();
+
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "Command sent successfully",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    }
+                    } catch (error) {
+                        console.error('Network error:', error);
+                    }
+                };
+            document.getElementById('epsOFF').onclick = async function () {
+                try {
+                    const response = await fetch('/Satellite/SendCommand', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ command: 'dp0' }) // Send the 'p21' command
+                    });
+                    if (!response.ok) {
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "warning",
+                            title: "Command has not been sent",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    } else {
+                        
+                        var audio = new Audio('./EPS OFF.mp3');
+                        audio.play();
+
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "Command sent successfully",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    }
+                } catch (error) {
+                    console.error('Network error:', error);
+                }
+            };
+            document.getElementById('telemRateBtn').onclick = async function () {
+                var interval = document.getElementById("telemRate").value;
+                var command = "id" + interval;
+                try {
+                    const response = await fetch('/Satellite/SendCommand', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ command: command }) // Send the 'p21' command
+                    });
+                    if (!response.ok) {
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "warning",
+                            title: "Command has not been sent",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    } else {
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "Command sent successfully",
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    }
+                } catch (error) {
+                    console.error('Network error:', error);
+                }
+            };
+            });
+            setInterval(fetchTelemetry, 1000);
+            window.onload = fetchTelemetry;
+
+        // Generic update function for any chart
+        function updateChart(chartInstance, data) {
+            const time = new Date().toLocaleTimeString();
+            // Limit the number of data points to 50
+            if (chartInstance.data.labels.length >= 50) {
+                chartInstance.data.labels.shift();
+                chartInstance.data.datasets[0].data.shift();
+            }
+            chartInstance.data.labels.push('.'); // You can use 'time' instead of '.' if you want actual time on the X-axis
+            chartInstance.data.datasets[0].data.push(data);
+            chartInstance.update(); // Refresh the chart
+        }
+        // Define the chart configurations in a list
+        const chartsConfig = [
+            { id: 'V_SA', label: 'V_SA', color: 'yellow', min: 0, max: 4 },
+            { id: 'yaw', label: 'Yaw', color: 'orange', min: 0, max: 400 }
+        ];
+
+        // Initialize charts
+        const charts = {};
+        chartsConfig.forEach(config => {
+            charts[config.id] = initializeChart(config.id, config.label, config.color, config.min, config.max);
+        });
+
+        // Update multiple charts dynamically
+        function updateCharts(updates) {
+            updates.forEach(update => {
+                if (charts[update.id]) {
+                    updateChart(charts[update.id], update.data);
+                }
+            });
+        }
+        function updateADCSDisplay(sensors) {
+    const adcsButtons = document.getElementById('adcs-buttons');
+    adcsButtons.innerHTML = ''; // Clear any existing buttons
+
+    // Set up a grid layout for the buttons
+    adcsButtons.classList.add('grid', 'grid-cols-1', 'gap-2', 'p-2'); // Tailwind classes for grid layout
+
+    sensors.forEach(sensor => {
+        const button = document.createElement('button');
+        button.classList.add('bg-gray-700', 'text-white', 'py-2', 'px-4', 'rounded', 'sensor-button', 'w-full');
+        button.style.minWidth = '10px'; // Ensure consistent button size
+        button.innerText = `${sensor.name}: ${sensor.value}`;
+        
+        // Attach event handler to each button to manage the chart for this sensor
+        button.onclick = () => {
+            const chartSensor = sensor.name;
+            const chartContainerId = `${chartSensor}-container`;
+
+            // Check if chart already exists; if so, remove it and associated elements
+            if (charts[chartSensor]) {
+                console.log(`Removing existing chart for ${chartSensor}.`);
+                charts[chartSensor].destroy();  // Destroy the existing chart instance
+                delete charts[chartSensor];     // Remove it from the charts object
+                        document.getElementById(chartSensor     ).parentElement.remove(); // Remove the chart element from the DOM
+
+                // Check and remove the chart container if it exists
+                const chartContainer = document.getElementById(chartContainerId);
+                if (chartContainer) {
+                    chartContainer.remove(); // Remove the entire chart container (parent) from the DOM
+                }
+            } else {
+                // Parameters for chart creation
+                const minVal = 0;
+                const maxVal = 100;
+                const nominalMin = 20; // Example nominal values; adjust as needed
+                const nominalMax = 80;
+                const r = 75, g = 192, b = 192; // Chart color in RGB
+                const color = `rgba(${r}, ${g}, ${b}, 0.6)`;
+
+                // Initialize the chart and add it to the charts object
+                charts[chartSensor] = initializeChart(chartSensor, `${chartSensor} -> ${sensor.value}`, color, minVal, maxVal, nominalMin, nominalMax);
+                
+                // Add initial data point
+                updateChart(charts[chartSensor], sensor.value);
+            }
+        };
+        
+        // Add button to the display
+        adcsButtons.appendChild(button);
+    });
+}
+
+        document.getElementById("toggleReal").addEventListener("click", function () {
+            real = !real;
+            const status = real ? "Real" : "Fake";
+            document.getElementById("status").innerText = "Current Mode: " + status;
+        });
+
+        </script>
+
+    </body>
+
+</html>
+
+
+

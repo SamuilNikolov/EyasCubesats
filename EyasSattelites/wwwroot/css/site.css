@@ -1,0 +1,63 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.error {
+    border-width: 5px !important;
+    border-style: solid !important;
+    animation: pulse 1s ease-in-out infinite; /* Adjust timing for slower pulse */
+}
+
+.nominal {
+    border-width: 5px !important;
+    border-style: solid !important;
+    border-color:green !important;
+}
+
+
+@keyframes pulse {
+    0% {
+        border-color: red;
+        color:red;
+    }
+
+    50% {
+        border-color: #f99999; /* Lighter red */
+        color: #f99999;
+    }
+
+    100% {
+        border-color: red;
+        color: red;
+    }
+}
+
+@font-face {
+    font-family: 'Gameplaya';
+    src: url('nulshock bd.otf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: Arial, sans-serif !important;
+}
