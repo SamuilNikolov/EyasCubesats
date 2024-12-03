@@ -1,17 +1,18 @@
-function initializeChart(id, label, color, min, max, nominalMin, nominalMax) {
+function initializeChart(chartSection, id, label, color, min, max, nominalMin, nominalMax) {
     const chartContainer = document.createElement('div');
     chartContainer.classList.add('chart-container');
     chartContainer.classList.add('w-1/5');
     chartContainer.classList.add('border');
     const header = document.createElement('h1');
     header.id = id;
-    header.style = "font-size:30px";
+    header.style = "font-size:20px";
     const canvas = document.createElement('canvas');
     canvas.id = id;
     chartContainer.appendChild(header);
     chartContainer.appendChild(canvas);
+    console.log(chartSection)
 
-    document.getElementById('charts-wrapper').appendChild(chartContainer);
+    document.getElementById(chartSection+'-charts-wrapper').appendChild(chartContainer);
 
     const ctx = canvas.getContext('2d');
 
@@ -19,7 +20,6 @@ function initializeChart(id, label, color, min, max, nominalMin, nominalMax) {
     const annotations = {};
     // Add nominal range lines if nominalMin and nominalMax are provided
     if (nominalMin) {
-        console.log('test')
         annotations.nominalRange = {
             type: 'line',
             yMin: nominalMin,

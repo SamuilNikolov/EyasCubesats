@@ -34,13 +34,12 @@
             display: flex;
             width: 100%;
         }
-
         .top-row {
-            height: 50vh;
+            height: 58vh;
         }
 
         .bottom-row {
-            height: 50vh;
+            height: 30vh;
         }
 
         .telemetry-section {
@@ -65,6 +64,11 @@
         .telemetry-section h2 {
             font-size: 3rem;
             color: white;
+        }
+
+        .telem-header{
+            font-size:3rem;
+            color:white;
         }
 
         .content {
@@ -92,20 +96,6 @@
             color: greenyellow;
         }
 
-        /* Sidebar styling */
-        #adcs-buttons {
-            position: absolute;
-            top: 16px;
-            right: 0;
-            bottom: 16px;
-            width: 200px;
-            overflow-y: auto;
-            background-color: black;
-            padding: 10px;
-            border-left: 1px solid #333;
-            border-radius: 8px 0 0 8px;
-        }
-
         /* Chart container styling */
         #charts-wrapper {
             display: flex;
@@ -116,104 +106,293 @@
         }
 
         .chart-container {
-            width: calc(33.333% - 10px);
-            max-width: 100px;
+            width: calc(50% - 10px);
             box-sizing: border-box;
-            background-color: #333;
+            background-color: black;
             border: 1px solid #555;
             border-radius: 8px;
             padding: 10px;
+            height:fit-content;
         }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+
+            .popup-content input[type="range"] {
+                width: 100%;
+            }
+
+            .popup-content button {
+                margin-top: 10px;
+            }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #1f1f1f;
+            padding: 4px 4px;
+            border-bottom: 1px solid #333;
+        }
+
+            .navbar h2 {
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: #fff;
+            }
+
+            .navbar .comms-state {
+                font-size: 1rem;
+                color: #bbbbbb;
+            }
+
+            .navbar .button-group {
+                display: flex;
+                gap: 12px;
+            }
+
+            .navbar button {
+                background-color: #4c6ef5;
+                border-radius: 6px;
+                padding: 8px 16px;
+                color: white;
+                text-sm;
+                transition: background-color 0.3s;
+            }
+
+                .navbar button:hover {
+                    background-color: #3b5ac2;
+                }
+
+        .input-container input {
+            border-radius: 6px;
+            padding: 8px;
+            color: black;
+            width: 100px;
+        }
+
+        /* Tooltip styles for the telemetry rate input */
+        .input-tooltip {
+            display: none;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 5px;
+            border-radius: 4px;
+            position: absolute;
+            top: 120%;
+            left: 0;
+            z-index: 10;
+        }
+
+        .input-container:hover .input-tooltip {
+            display: block;
+        }
+
+        .input-field{
+            color:black;
+        }
+
     </style>
 </head>
 
-<body>
+<body style="height: 100vh !important;">
+ 
     <div class="flex-container mt-3">
-        <div class="top-row">
-            <div class="telemetry-section" id="comms-section">
-                <h2>COMMS</h2>
-                <h5 id="commsState">COMMS STATE</h5>
-                <hr />
-                <div id="comms" class="content">Initializing readings...</div>
-                <div class="flex">
-                    <div class="button-container flex justify-center space-x-2 w-1/2">
-                        <button id="telemRateBtn" class="bg-blue-600 hover:bg-blue-700 text-black text-sm p-1 rounded text-white">CHANGE TELEMETRY RATE (S)</button>
-                        <input type="number" min="1" max="60" id="telemRate" class="text-sm text-center rounded-lg text-black" />
+        <nav class="navbar h-1/6" id="comms-section" style="height:6%">
+            <div class="border-none" style="border:none">
+                <h1 class="text-3xl">COMMS</h1>
+            </div>
+            <div class="button-group">
+                <div class="input-container relative">
+                    <input type="number" min="1" max="60" id="telemRate" placeholder="Rate (S)" class="text-sm text-center rounded-lg text-black" />
+                    <div class="input-tooltip">Set Telemetry Rate</div>
+                </div>
+                <button id="telemRateBtn" class="bg-blue-600 hover:bg-blue-700 text-sm p-1 rounded text-white">CHANGE TELEMETRY RATE</button>
+            </div>
+        </nav>
+        <div class="w-full h-3/6 flex">
+            <div class="telemetry-section w-1/2 relative flex flex-wrap" id="tcs-section">
+                <!-- Main ADCS Content -->
+                <div class="p-4 flex flex-col space-y-4 w-10/12 overflow-y-auto">
+                    <div class="flex items-start justify-between w-full">
+                        <h2 class="text-3xl" id="tcsState">TCS</h2>
                     </div>
-                    <div class="button-container flex justify-center space-x-2 w-1/2">
-                        <input type="text" id="chartTypeInput" placeholder="Enter telemetry type (e.g., V_SA)" class="text-black">
-                        <button id="generateChartBtn" class="bg-blue-700">Generate Chart</button>
+                    <hr class="my-4 border-gray-700">
+                    <!-- Chart wrapper with scrollable content -->
+                    <div id="tcs-charts-wrapper" class="flex flex-wrap gap-1 overflow-y-auto">
+                        <!-- Placeholder for charts -->
                     </div>
-                    <div id="chart-generator-buttons"></div>
+                </div>
+                <!-- Sidebar for ADCS Buttons -->
+                <div id="tcs-buttons" class="side w-2/12 bg-black overflow-y-auto border-l border-gray-600 flex flex-col space-y-1 text-sm">
+                    Initializing
+                    <!-- Additional buttons can be added here -->
                 </div>
             </div>
-            <div class="telemetry-section" id="adcs-section">
-                <div class="flex items-center w-full">
-                    <h2 class="w-10/12">ADCS</h2>
-                    <button id="acdsTelemetry" class="bg-purple-900 hover:bg-purple-600 text-white text-sm py-2 px-6 rounded w-4/12">GET ACDS TELEMETRY</button>
-                    <button class="bg-purple-800 hover:bg-purple-500 text-white text-sm p-2 rounded m-2" id="toggleReal">Toggle Real Telemetry</button>
-                    <h5 id="status">Current Mode: Real</h5>
-                </div>
-                <h5 id="adcsState">ADCS STATE</h5>
-                <hr />
-                <div id="adcs" class="content">Initializing ADCS data...</div>
-
-                <div id="charts-wrapper" class="w-full flex-wrap"></div>
-
-                <div id="adcs-buttons" class="p-2"></div>
-                <div class="button-container flex flex-col space-y-4">
-                    <div class="slider-container flex flex-col items-center border p-2 w-1/2">
-                        <label for="motorActuation" class="text-lg mb-2">Motor Actuation Duration</label>
-                        <input type="range" id="motorActuation" class="slider" min="-5" max="5" value="0" />
-                        <div class="flex justify-center mt-4 space-x-6">
-                            <button id="motorActuate" class="bg-purple-900 hover:bg-purple-700 text-white p-1 rounded">ACTUATE MOTOR</button>
-                            <span id="motorActuationValue" class="text-lg">0</span>
+            <div class="telemetry-section w-1/2 relative flex flex-wrap" id="eps-section">
+                <!-- Main ADCS Content -->
+                <div class="p-4 flex flex-col space-y-4 w-10/12 overflow-y-auto">
+                    <div class="flex items-start justify-between w-full">
+                        <h2 class="text-3xl" id="epsState">ADCS</h2>
+                        <div class="flex space-x-2">
+                            <button id="epsON" class="bg-green-900 hover:bg-green-700 text-white text-sm p-2 rounded">TURN EPS ON</button>
+                            <button id="epsOFF" class="bg-red-900 hover:bg-red-700 text-white text-sm p-2 rounded">TURN EPS OFF</button>
                         </div>
                     </div>
-                    <div class="flex justify-center space-x-6">
-                        <button id="adcsON" class="bg-green-900 hover:bg-green-700 text-white text-sm p-2 rounded">TURN ADCS ON</button>
-                        <button id="adcsOFF" class="bg-red-900 hover:bg-red-700 text-white text-sm p-2 rounded">TURN ADCS OFF</button>
+                    <hr class="my-4 border-gray-700">
+                    <!-- Chart wrapper with scrollable content -->
+                    <div id="eps-charts-wrapper" class="flex flex-wrap gap-1 overflow-y-auto">
+                        <!-- Placeholder for charts -->
                     </div>
+                </div>
+                <!-- Sidebar for ADCS Buttons -->
+                <div id="eps-buttons" class="side w-2/12 bg-black overflow-y-auto border-l border-gray-600 flex flex-col space-y-1 text-sm">
+                    Initializing
+                    <!-- Additional buttons can be added here -->
                 </div>
             </div>
         </div>
-        <div class="bottom-row">
-            <div class="telemetry-section w-1/3" id="eps-section">
-                <h2>EPS</h2>
-                <h5 id="epsState">EPS STATE</h5>
-                <hr />
-                <div id="eps" class="content">Initializing EPS data...</div>
-                <div class="button-container flex justify-between">
-                    <button id="epsON" class="bg-green-900 hover:bg-green-700 text-white p-2 rounded">TURN EPS ON</button>
-                    <button id="epsOFF" class="bg-red-900 hover:bg-red-700 text-white p-2 rounded">TURN EPS OFF</button>
+
+        <div class="w-full h-2/6 flex" style="height:44%">
+            <div class="telemetry-section w-2/3 relative flex flex-wrap" id="adcs-section">
+                <!-- Main ADCS Content -->
+                <div class="p-4 flex flex-col space-y-4 w-10/12 overflow-y-auto">
+                    <div class="flex items-start justify-between w-full">
+                        <h2 class="text-3xl" id="adcsState">ADCS</h2>
+                        <div class="flex space-x-2 w-6/12">
+                            <button id="adcsON" class="bg-green-900 hover:bg-green-700 text-white text-sm p-2 rounded">TURN ADCS ON</button>
+                            <button id="adcsOFF" class="bg-red-900 hover:bg-red-700 text-white text-sm p-2 rounded">TURN ADCS OFF</button>
+                            <button id="actuateMotorBtn" class="bg-purple-900 hover:bg-purple-700 text-white p-2 rounded">ACTUATE MOTOR</button>
+                            <button id="acdsTelemetry" class="bg-purple-900 hover:bg-purple-600 text-white text-sm py-2 px-6 rounded">GET ACDS TELEMETRY</button>
+                            <button id="toggleReal" class="bg-purple-800 hover:bg-purple-500 text-white text-sm p-2 rounded">Toggle Real Telemetry</button>
+                        </div>
+                    </div>
+                    <hr class="my-4 border-gray-700">
+                    <!-- Chart wrapper with scrollable content -->
+                    <div id="adcs-charts-wrapper" class="flex flex-wrap gap-1 overflow-y-auto">
+                        <!-- Placeholder for charts -->
+                    </div>
+                </div>
+                <!-- Sidebar for ADCS Buttons -->
+                <div id="adcs-buttons" class="side w-2/12 bg-black overflow-y-auto border-l border-gray-600 flex flex-col space-y-1 text-sm">
+                    Initializing
+                    <!-- Additional buttons can be added here -->
                 </div>
             </div>
-            <div class="telemetry-section w-1/3" id="tcs-section">
-                <h2>TCS</h2>
-                <hr />
-                <div id="tcs" class="content">Initializing TCS data...</div>
-            </div>
-            <div class="iframe-section w-1/2">
+            <div class="iframe-section w-1/3">
                 <iframe src="/static/html" class="w-full h-full border-0" title="Example HTML File"></iframe>
+            </div>
+        </div>
+    </div>
+    <div id="popupOverlay" class="popup-overlay">
+        <div class="popup-content">
+            <h2>Motor Actuation Strength/Direction</h2>
+            <input type="range" id="motorActuation" class="slider" min="-5" max="5" value="0" />
+            <div class="flex justify-center mt-4 space-x-6">
+                <button id="motorActuate" class="bg-purple-900 hover:bg-purple-700 text-white p-1 rounded">ACTUATE MOTOR</button>
+                <span id="motorActuationValue" class="text-lg">0</span>
+            </div>
+            <div class="mt-4">
+                <button id="closePopup" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded">Close</button>
+            </div>
+        </div>
+    </div>
+    <div id="chartConfigOverlay" class="popup-overlay">
+        <div class="popup-content">
+            <h2>Configure Chart Parameters</h2>
+            <label>Min Reading:</label>
+            <input type="number" id="chartMinReading" class="input-field" placeholder="e.g., 0" />
+            <label>Max Reading:</label>
+            <input type="number" id="chartMaxReading" class="input-field" placeholder="e.g., 100" />
+            <label>Nominal Min:</label>
+            <input type="number" id="chartNominalMin" class="input-field" placeholder="e.g., 20" />
+            <label>Nominal Max:</label>
+            <input type="number" id="chartNominalMax" class="input-field" placeholder="e.g., 80" />
+            <label>Color (RGB):</label>
+            <input type="number" id="chartColorR" class="input-field" placeholder="Red (0-255)" />
+            <input type="number" id="chartColorG" class="input-field" placeholder="Green (0-255)" />
+            <input type="number" id="chartColorB" class="input-field" placeholder="Blue (0-255)" />
+            <div class="mt-4 flex justify-center space-x-4">
+                <button id="submitChartConfig" class="bg-blue-600 text-white p-2 rounded">Submit</button>
+                <button id="closeChartConfig" class="bg-red-600 text-white p-2 rounded">Close</button>
             </div>
         </div>
     </div>
         <script>
 
-        async function loadSensorsConfig() {
-            try {
-                const response = await fetch('./sensors.json');
-                if (response.ok) {
-                    return await response.json();
-                } else {
-                    console.error('Failed to load sensors configuration');
-                    return {};
-                }
-            } catch (error) {
-                console.error('Error fetching sensors configuration:', error);
-                return {};
+        const chartConfigOverlay = document.getElementById("chartConfigOverlay");
+        const submitChartConfig = document.getElementById("submitChartConfig");
+        const closeChartConfig = document.getElementById("closeChartConfig");
+            let currentChartSection = null;
+        let currentSensorIdForChart = null;
+        closeChartConfig.addEventListener("click", () => {
+            chartConfigOverlay.style.display = "none";
+        });
+        submitChartConfig.addEventListener("click", () => {
+            const minReading = parseFloat(document.getElementById("chartMinReading").value);
+            const maxReading = parseFloat(document.getElementById("chartMaxReading").value);
+            const nominalMin = parseFloat(document.getElementById("chartNominalMin").value);
+            const nominalMax = parseFloat(document.getElementById("chartNominalMax").value);
+            const colorR = parseInt(document.getElementById("chartColorR").value);
+            const colorG = parseInt(document.getElementById("chartColorG").value);
+            const colorB = parseInt(document.getElementById("chartColorB").value);
+            const chartColor = `rgba(${colorR}, ${colorG}, ${colorB}, 0.6)`;
+
+
+
+            // Check if a chart already exists for this sensor and remove it if necessary
+            if (charts[currentSensorIdForChart]) {
+                console.log(`Removing existing chart for ${currentSensorIdForChart}.`);
+                charts[currentSensorIdForChart].destroy();
+                delete charts[currentSensorIdForChart];
+                document.getElementById(currentSensorIdForChart).parentElement.remove();
             }
-        }
+
+            // Initialize the chart for the selected sensor with the configured values
+            charts[currentSensorIdForChart] = initializeChart(
+                currentChartSection,
+                currentSensorIdForChart,
+                `${currentSensorIdForChart}`,
+                chartColor,
+                minReading,
+                maxReading,
+                nominalMin,
+                nominalMax
+            );
+
+            // Hide the overlay after submission
+            chartConfigOverlay.style.display = "none";
+        });
+
+        const actuationButton = document.getElementById("actuateMotorBtn");
+        const popupOverlay = document.getElementById("popupOverlay");
+        const closePopupButton = document.getElementById("closePopup");
+        actuationButton.addEventListener("click", () => {
+            popupOverlay.style.display = "flex";
+        });
+
+        // Close the popup when the close button is clicked
+        closePopupButton.addEventListener("click", () => {
+            popupOverlay.style.display = "none";
+        });
+       
 
         // Function to create buttons dynamically for each button group
         function createButtons(sensorsConfig) {
@@ -292,13 +471,13 @@
 
                 if (commsLine) {
                     const pwrValue = commsLine.includes('Pwr=1');
-                    const adcsValue = commsLine.includes('ADCS=1');
+                const adcsValue = commsLine.includes('ADCS=1') || commsLine.includes('ADS=1');
                     // Update COMMS section
                     let pwrStatusClass = pwrValue ? 'status-nominal' : 'status-bad';
                 let commsStatusGlow = pwrValue
                     ? (document.getElementById('comms-section').classList.remove('error'), document.getElementById('comms-section').classList.add('nominal'))
                     : (document.getElementById('comms-section').classList.add('error'), document.getElementById('comms-section').classList.remove('nominal'));
-                document.getElementById('epsState').innerHTML = `<p class="${pwrStatusClass}">Power: ${pwrValue ? 'Nominal' : 'Error'}</p>`;
+                document.getElementById('epsState').innerHTML = `<p class="${pwrStatusClass}">EPS: ${pwrValue ? 'Nominal' : 'Error'}</p>`;
 
                 let pwrStatusGlow = pwrValue
                     ? (document.getElementById('eps-section').classList.remove('error'), document.getElementById('eps-section').classList.add('nominal'))
@@ -308,20 +487,25 @@
                 let adcsStatusGlow = adcsValue
                     ? (document.getElementById('adcs-section').classList.remove('error'), document.getElementById('adcs-section').classList.add('nominal'))
                     : (document.getElementById('adcs-section').classList.add('error'), document.getElementById('adcs-section').classList.remove('nominal'));
+                document.getElementById('tcsState').innerHTML = `<p class="${adcsStatusClass}">TCS: ${adcsValue ? 'Nominal' : 'Error'}</p>`;
 
-                    document.getElementById('comms').innerText = comms.join('\n');
-                
+                let tcsStatusGlow = adcsValue
+                    ? (document.getElementById('tcs-section').classList.remove('error'), document.getElementById('tcs-section').classList.add('nominal'))
+                    : (document.getElementById('tcs-section').classList.add('error'), document.getElementById('tcs-section').classList.remove('nominal'));
+                    if (!pwrValue) {
+                    var audio = new Audio('./err-beep.mp3');
+                    audio.play();
+
+                    }
+                    if (!adcsValue) {
+                    var audio = new Audio('./err-beep.mp3');
+                    audio.play();
+
+                    }
                     // EPS Section
                     const epsData = telemetryLines.filter(line => line.includes('P:'))[0];
-                    if (epsData && epsData.length) {
-                        document.getElementById('eps').innerText = epsData;
-                    }
 
-                    // TCS Section
-                    const tcsData = telemetryLines.filter(line => line.includes('T:'));
-                    if (tcsData.length) {
-                        document.getElementById('tcs').innerText = tcsData;
-                    }
+
 
                 var adcsData = telemetryLines.filter(line => line.includes('A:'))[0];
                 // Check for specific telemetry messages in ADCS
@@ -361,6 +545,8 @@
                     }
                 }
                 const adcsLine = telemetryLines.find(line => line.includes('A:'));
+                const epsLine = telemetryLines.find(line => line.includes('P:'));
+                const tcsLine = telemetryLines.find(line => line.includes('T:'));
                 if (adcsLine) {
                     const sensorData = adcsLine.split('A:')[1].trim();
                     const sensors = sensorData.split(', ').map(sensor => {
@@ -369,35 +555,28 @@
                     });
                     updateADCSDisplay(sensors);
                 }
-
-                                document.getElementById('adcs').innerText = adcsData;
-
+                if (epsLine) {
+                    const sensorData = epsLine.split('P:')[1].trim();
+                    const sensors = sensorData.split(', ').map(sensor => {
+                        const [name, value] = sensor.split('=');
+                        return { name: name.trim(), value: parseFloat(value) };
+                    });
+                    updateEPSDisplay(sensors);
+                }
+                if (tcsLine) {
+                    const sensorData = tcsLine.split('T:')[1].trim();
+                    console.log(sensorData);
+                    const sensors = sensorData.split(' ').map(sensor => {
+                        const [name, value] = sensor.split('=');
+                        return { name: name.trim(), value: parseFloat(value) };
+                    });
+                    updateTCSDisplay(sensors);
+                }
                 }
 
             }
 
-            document.getElementById('generateChartBtn').addEventListener('click', () => {
-                const chartType = document.getElementById('chartTypeInput').value.trim();
-                if (!chartType) return; // Exit if input is empty
-                var chartSensor = chartType.split(",")[0];
-                var minVal = parseInt(chartType.split(",")[1]);
-                var maxVal = parseInt(chartType.split(",")[2]);
-                var nominalMin = parseInt(chartType.split(",")[6]);
-                var nominalMax = parseInt(chartType.split(",")[7]);
-            var r = parseInt(chartType.split(",")[3]);
-            var g = parseInt(chartType.split(",")[4]);
-            var b = parseInt(chartType.split(",")[5]);
-            // Check if chart already exists
-            if (charts[chartSensor]) {
-                console.log(`Removing existing chart for ${chartSensor}.`);
-                charts[chartSensor].destroy();  // Destroy existing chart instance
-                delete charts[chartSensor];     // Remove it from charts object
-                document.getElementById(chartSensor).parentElement.remove(); // Remove the chart element from the DOM
-                return;
-            }
 
-            charts[chartSensor] = initializeChart(`${chartSensor}`, `${chartSensor} Value`, `rgba(${r}, ${g}, ${b}, 0.6)`, minVal, maxVal, nominalMin, nominalMax);
-        });
 
         document.getElementById('motorActuate').addEventListener('click', async () => {
             const actuationValue = parseInt(document.getElementById('motorActuation').value);
@@ -453,8 +632,7 @@
             });
 
             document.addEventListener('DOMContentLoaded', async function () {
-            const sensorsConfig = await loadSensorsConfig();
-            createButtons(sensorsConfig);
+
                 document.getElementById('adcsON').onclick = async function () {
                     try {
                         const response = await fetch('/Satellite/SendCommand', {
@@ -680,7 +858,7 @@
         // Initialize charts
         const charts = {};
         chartsConfig.forEach(config => {
-            charts[config.id] = initializeChart(config.id, config.label, config.color, config.min, config.max);
+            //charts[config.id] = initializeChart(config.id, config.label, config.color, config.min, config.max);
         });
 
         // Update multiple charts dynamically
@@ -692,56 +870,109 @@
             });
         }
         function updateADCSDisplay(sensors) {
-    const adcsButtons = document.getElementById('adcs-buttons');
+            const adcsButtons = document.getElementById('adcs-buttons');
     adcsButtons.innerHTML = ''; // Clear any existing buttons
 
     // Set up a grid layout for the buttons
     adcsButtons.classList.add('grid', 'grid-cols-1', 'gap-2', 'p-2'); // Tailwind classes for grid layout
+            sensors.forEach(sensor => {
+                const button = document.createElement('button');
+                button.classList.add('bg-gray-800', 'text-white', 'py-2', 'px-4', 'rounded', 'sensor-button', 'w-full', 'hover:bg-gray-500');
+                button.style.minWidth = '10px';
+                button.innerText = `${sensor.name}: ${sensor.value}`;
 
-    sensors.forEach(sensor => {
-        const button = document.createElement('button');
-        button.classList.add('bg-gray-700', 'text-white', 'py-2', 'px-4', 'rounded', 'sensor-button', 'w-full');
-        button.style.minWidth = '10px'; // Ensure consistent button size
-        button.innerText = `${sensor.name}: ${sensor.value}`;
-        
-        // Attach event handler to each button to manage the chart for this sensor
-        button.onclick = () => {
-            const chartSensor = sensor.name;
-            const chartContainerId = `${chartSensor}-container`;
+                // Attach event handler to each button to show the configuration popup
+                button.onclick = () => {
+                    const chartSensor = sensor.name;
 
-            // Check if chart already exists; if so, remove it and associated elements
-            if (charts[chartSensor]) {
-                console.log(`Removing existing chart for ${chartSensor}.`);
-                charts[chartSensor].destroy();  // Destroy the existing chart instance
-                delete charts[chartSensor];     // Remove it from the charts object
-                        document.getElementById(chartSensor     ).parentElement.remove(); // Remove the chart element from the DOM
+                    if (charts[chartSensor]) {
 
-                // Check and remove the chart container if it exists
-                const chartContainer = document.getElementById(chartContainerId);
-                if (chartContainer) {
-                    chartContainer.remove(); // Remove the entire chart container (parent) from the DOM
-                }
-            } else {
-                // Parameters for chart creation
-                const minVal = 0;
-                const maxVal = 100;
-                const nominalMin = 20; // Example nominal values; adjust as needed
-                const nominalMax = 80;
-                const r = 75, g = 192, b = 192; // Chart color in RGB
-                const color = `rgba(${r}, ${g}, ${b}, 0.6)`;
+                        // If chart exists, remove it without showing the pop-up
+                        console.log(`Removing existing chart for ${chartSensor}.`);
+                        charts[chartSensor].destroy();  // Destroy the existing chart instance
+                        delete charts[chartSensor];     // Remove it from the charts object
+                        document.getElementById(chartSensor).parentElement.remove(); // Remove the chart element from the DOM
+                    } else {
+                        currentSensorIdForChart = sensor.name; // Set the current sensor ID
+                        currentChartSection = "adcs";
+                        chartConfigOverlay.style.display = "flex";
+                    }
+                };
 
-                // Initialize the chart and add it to the charts object
-                charts[chartSensor] = initializeChart(chartSensor, `${chartSensor} -> ${sensor.value}`, color, minVal, maxVal, nominalMin, nominalMax);
-                
-                // Add initial data point
-                updateChart(charts[chartSensor], sensor.value);
-            }
-        };
-        
-        // Add button to the display
-        adcsButtons.appendChild(button);
-    });
+                // Add button to the display
+                adcsButtons.appendChild(button);
+            });
+
 }
+        function updateEPSDisplay(sensors) {
+            const epsButtons = document.getElementById('eps-buttons');
+            epsButtons.innerHTML = ''; // Clear any existing buttons
+
+            // Set up a grid layout for the buttons
+            epsButtons.classList.add('grid', 'grid-cols-1', 'gap-2', 'p-2');
+            sensors.forEach(sensor => {
+                const button = document.createElement('button');
+                button.classList.add('bg-gray-800', 'text-white', 'py-2', 'px-4', 'rounded', 'sensor-button', 'w-full', 'hover:bg-gray-500');
+                button.style.minWidth = '10px';
+                button.innerText = `${sensor.name}: ${sensor.value}`;
+
+                // Attach event handler to each button to show the configuration popup
+                button.onclick = () => {
+                    const chartSensor = sensor.name;
+
+                    if (charts[chartSensor]) {
+
+                        // If chart exists, remove it without showing the pop-up
+                        console.log(`Removing existing chart for ${chartSensor}.`);
+                        charts[chartSensor].destroy();  // Destroy the existing chart instance
+                        delete charts[chartSensor];     // Remove it from the charts object
+                        document.getElementById(chartSensor).parentElement.remove(); // Remove the chart element from the DOM
+                    } else {
+                        currentSensorIdForChart = sensor.name; // Set the current sensor ID
+                                currentChartSection = "eps";
+                        chartConfigOverlay.style.display = "flex";
+                    }
+                };
+
+                // Add button to the display
+                epsButtons.appendChild(button);
+            });
+        }
+
+        function updateTCSDisplay(sensors) {
+            const epsButtons = document.getElementById('tcs-buttons');
+            epsButtons.innerHTML = ''; // Clear any existing buttons
+
+            // Set up a grid layout for the buttons
+            epsButtons.classList.add('grid', 'grid-cols-1', 'gap-2', 'p-2');
+            sensors.forEach(sensor => {
+                const button = document.createElement('button');
+                button.classList.add('bg-gray-800', 'text-white', 'py-2', 'px-4', 'rounded', 'sensor-button', 'w-full', 'hover:bg-gray-500');
+                button.style.minWidth = '10px';
+                button.innerText = `${sensor.name}: ${sensor.value}`;
+
+                // Attach event handler to each button to show the configuration popup
+                button.onclick = () => {
+                    const chartSensor = sensor.name;
+
+                    if (charts[chartSensor]) {
+
+                        // If chart exists, remove it without showing the pop-up
+                        console.log(`Removing existing chart for ${chartSensor}.`);
+                        charts[chartSensor].destroy();  // Destroy the existing chart instance
+                        delete charts[chartSensor];     // Remove it from the charts object
+                        document.getElementById(chartSensor).parentElement.remove(); // Remove the chart element from the DOM
+                    } else {
+                        currentSensorIdForChart = sensor.name; // Set the current sensor ID
+                        currentChartSection = "eps";
+                        chartConfigOverlay.style.display = "flex";
+                    }
+                };
+
+                // Add button to the display
+                epsButtons.appendChild(button);
+            });
+        }
 
         document.getElementById("toggleReal").addEventListener("click", function () {
             real = !real;
